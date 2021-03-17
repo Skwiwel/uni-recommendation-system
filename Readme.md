@@ -4,7 +4,7 @@
 > Są osoby, które wchodzą na naszą stronę i nie mogą się zdecydować, którym produktom przyjrzeć się nieco lepiej. Może dało by się im coś polecić?
 
 ### Zbiór danych 
-IUM21L_Zad_02_02 - rozpakowane w katalogu `data`
+IUM21L_Zad_02_02 - rozpakowane w katalogu `data_raw/`, wyczyszczone w katalogu `data/`
 
 ## Regulamin
 - Wramach projektu trzeba dostarczyć:
