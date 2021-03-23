@@ -3,12 +3,17 @@ package service
 import (
 	"log"
 	"net/http"
+	"os"
 )
 
 func Run() {
 	errChan := make(chan error, 10)
 
-	popularityService := makeRecommendationService()
+	recommendationService, err := makeRecommendationService()
+	if err != nil {
+		log.Println("Could not create a recommendation service: " + err.Error())
+		os.Exit(1)
+	}
 
 	serviceMux := http.NewServeMux()
 	serviceMux.HandleFunc("/recommendations", recommendationService.HttpHandler)

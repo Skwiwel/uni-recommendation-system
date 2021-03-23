@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,18 +20,19 @@ type RecommendationService interface {
 type recommendationService struct {
 	recommendationDirs map[RecommendationModel]string
 	modelScripts       map[RecommendationModel]string
+	testHandler        AbTestHandler
 }
 
 type RecommendationModel int
 
 const (
-	Popularity RecommendationModel = iota
-	Collaborative
+	Popularity    RecommendationModel = 1
+	Collaborative RecommendationModel = 2
 )
 
 const recommendationsDirectory = "../recommendations/"
 
-func makeRecommendationService() RecommendationService {
+func makeRecommendationService() (RecommendationService, error) {
 	var s recommendationService
 	s.recommendationDirs = map[RecommendationModel]string{
 		Popularity:    recommendationsDirectory + "popularity/",
@@ -40,17 +42,24 @@ func makeRecommendationService() RecommendationService {
 		Popularity:    "",
 		Collaborative: "",
 	}
-	return &s
+
+	testHandler, err := makeAbTestHAndler()
+	if err != nil {
+		return nil, err
+	}
+	s.testHandler = testHandler
+
+	return &s, nil
 }
 
 type RecommendationsFromFile struct {
-	User_id         string
+	User_id         int
 	Recommendations []string
 }
 
 type ResourceObject struct {
 	Type       string      `json:"type"`
-	Id         string      `json:"id"`
+	Id         int         `json:"id"`
 	Attributes interface{} `json:"attributes"`
 }
 
@@ -58,9 +67,9 @@ type RecommendationsResourceAttributes struct {
 	Recommendations []string `json:"recommendations"`
 }
 
-func makeRecommendationsResource(user_id string, recommendations []string) *ResourceObject {
+func makeRecommendationsResource(userID int, recommendations []string) *ResourceObject {
 	attributes := RecommendationsResourceAttributes{recommendations}
-	r := ResourceObject{"user", user_id, attributes}
+	r := ResourceObject{"user", userID, attributes}
 	return &r
 }
 
@@ -77,11 +86,25 @@ func (s *recommendationService) HttpHandler(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		filename := s.recommendationsDirectory + userID + ".json"
+		userExists := s.checkUserExists(userID)
+		if !userExists {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		model, err := s.testHandler.AssignModelToUser(userID)
+		if err != nil {
+			log.Println("Could not assign model to user: " + err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		filename := s.recommendationDirs[model] + fmt.Sprint(userID) + ".json"
 		recommendationsJsonFile, err := os.Open(filename)
 		defer recommendationsJsonFile.Close()
 		if err != nil {
-			w.WriteHeader(http.StatusForbidden)
+			log.Println("Could not open file <" + filename + ">: " + err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -106,11 +129,16 @@ func (s *recommendationService) HttpHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func parseUserId(query url.Values, w http.ResponseWriter) (string, error) {
-	userID := query.Get("user_id")
-	if userID == "" {
+func parseUserId(query url.Values, w http.ResponseWriter) (int, error) {
+	userIdStr := query.Get("user_id")
+	if userIdStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		return "", errors.New("invalid used id")
+		return 0, &RequestError{"invalid used id", errors.New("")}
+	}
+	userID, err := strconv.Atoi(userIdStr)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return 0, &RequestError{"invalid used id", errors.New("")}
 	}
 	return userID, nil
 }
@@ -132,6 +160,15 @@ func parseNumRecommendations(query url.Values, w http.ResponseWriter) (int, erro
 		}
 	}
 	return numRecommendations, nil
+}
+
+func (s *recommendationService) checkUserExists(userID int) bool {
+	// Hardcoded to search for a recommendation file in Popularity model
+	filename := s.recommendationDirs[Popularity] + fmt.Sprint(userID) + ".json"
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
 
 func (s *recommendationService) GenRecommendations() {
