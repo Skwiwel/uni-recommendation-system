@@ -17,18 +17,29 @@ type RecommendationService interface {
 }
 
 type recommendationService struct {
-	recommendationModel      string
-	recommendationsDirectory string
+	recommendationDirs map[RecommendationModel]string
+	modelScripts       map[RecommendationModel]string
 }
+
+type RecommendationModel int
+
+const (
+	Popularity RecommendationModel = iota
+	Collaborative
+)
 
 const recommendationsDirectory = "../recommendations/"
 
-func makePopularityService() RecommendationService {
-	s := recommendationService{"popularity", recommendationsDirectory + "popularity/"}
-	return &s
-}
-func makeCollaborativeService() RecommendationService {
-	s := recommendationService{"collaborative", recommendationsDirectory + "collaborative/"}
+func makeRecommendationService() RecommendationService {
+	var s recommendationService
+	s.recommendationDirs = map[RecommendationModel]string{
+		Popularity:    recommendationsDirectory + "popularity/",
+		Collaborative: recommendationsDirectory + "collaborative/",
+	}
+	s.modelScripts = map[RecommendationModel]string{
+		Popularity:    "",
+		Collaborative: "",
+	}
 	return &s
 }
 

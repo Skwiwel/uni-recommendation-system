@@ -8,12 +8,10 @@ import (
 func Run() {
 	errChan := make(chan error, 10)
 
-	popularityService := makePopularityService()
-	collaborativeService := makeCollaborativeService()
+	popularityService := makeRecommendationService()
 
 	serviceMux := http.NewServeMux()
-	serviceMux.HandleFunc("/popularity", popularityService.HttpHandler)
-	serviceMux.HandleFunc("/collaborative", collaborativeService.HttpHandler)
+	serviceMux.HandleFunc("/recommendations", recommendationService.HttpHandler)
 	serviceServer := &http.Server{Addr: ":80", Handler: serviceMux}
 
 	go func() {
