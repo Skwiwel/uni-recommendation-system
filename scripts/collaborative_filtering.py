@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import json
 import pandas as pd
@@ -58,6 +59,8 @@ def save_to_files(recommendations_per_user: int = 10):
         items = items + purchased.index.to_list()[:recommendations_per_user - len(items)]
         
         data['recommendations'] = items
+        if not os.path.isdir(SAVE_PATH): 
+            os.makedirs(SAVE_PATH)
         with open(SAVE_PATH + str(uid) + '.json', 'w') as outfile:
             json.dump(data, outfile)
 
