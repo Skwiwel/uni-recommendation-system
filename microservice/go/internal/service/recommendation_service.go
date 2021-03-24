@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"strconv"
 )
 
@@ -19,35 +20,47 @@ type RecommendationService interface {
 
 type recommendationService struct {
 	recommendationDirs map[RecommendationModel]string
-	modelScripts       map[RecommendationModel]string
-	testHandler        AbTestHandler
+	modelScripts       map[RecommendationModel][]string
+	modelToUserHandler ModelToUserHandler
 }
 
 type RecommendationModel int
 
+// These have to be aligned with the model_id's in the ab_test db
 const (
-	Popularity    RecommendationModel = 1
-	Collaborative RecommendationModel = 2
+	Popularity RecommendationModel = iota + 1
+	Collaborative
+
+	modelIndexLimit
 )
 
-const recommendationsDirectory = "../recommendations/"
+const recommendationsDirectory = "recommendations/"
+const scriptsDirectory = "scripts/"
+const pythonCommand = "py"
+const genNumRecommendations = "50"
 
-func makeRecommendationService() (RecommendationService, error) {
+func makeRecommendationService(abTestOn bool) (RecommendationService, error) {
 	var s recommendationService
 	s.recommendationDirs = map[RecommendationModel]string{
 		Popularity:    recommendationsDirectory + "popularity/",
 		Collaborative: recommendationsDirectory + "collaborative/",
 	}
-	s.modelScripts = map[RecommendationModel]string{
-		Popularity:    "",
-		Collaborative: "",
+	s.modelScripts = map[RecommendationModel][]string{
+		Popularity:    {pythonCommand, scriptsDirectory + "collaborative_filtering.py", genNumRecommendations},
+		Collaborative: {pythonCommand, scriptsDirectory + "most_popular.py", genNumRecommendations},
 	}
 
-	testHandler, err := makeAbTestHAndler()
-	if err != nil {
-		return nil, err
+	var modelToUserHandler ModelToUserHandler
+	if abTestOn {
+		var err error
+		modelToUserHandler, err = makeAbTestHAndler()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		modelToUserHandler = makeStaticModelToUserHandler(Collaborative)
 	}
-	s.testHandler = testHandler
+	s.modelToUserHandler = modelToUserHandler
 
 	return &s, nil
 }
@@ -64,10 +77,10 @@ type ResourceObject struct {
 }
 
 type RecommendationsResourceAttributes struct {
-	Recommendations []string `json:"recommendations"`
+	Recommendations []int `json:"recommendations"`
 }
 
-func makeRecommendationsResource(userID int, recommendations []string) *ResourceObject {
+func makeRecommendationsResource(userID int, recommendations []int) *ResourceObject {
 	attributes := RecommendationsResourceAttributes{recommendations}
 	r := ResourceObject{"user", userID, attributes}
 	return &r
@@ -92,7 +105,7 @@ func (s *recommendationService) HttpHandler(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		model, err := s.testHandler.AssignModelToUser(userID)
+		model, err := s.modelToUserHandler.AssignModelToUser(userID)
 		if err != nil {
 			log.Println("Could not assign model to user: " + err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
@@ -173,4 +186,19 @@ func (s *recommendationService) checkUserExists(userID int) bool {
 
 func (s *recommendationService) GenRecommendations() {
 	log.Println("Generating recommendations")
+
+	for m := RecommendationModel(1); m < modelIndexLimit; m++ {
+		script, ok := s.modelScripts[m]
+		if !ok {
+			log.Println("Could not acquire gen recommendation script for model <" + fmt.Sprint(m) + ">")
+			continue
+		}
+		log.Println("Running script: ", script)
+		c := exec.Command(script[0], script[1:]...)
+		if err := c.Run(); err != nil {
+			log.Println("Could not run gen recommendation script: ", err)
+		}
+	}
+
+	log.Println("Finished generating recommendations")
 }

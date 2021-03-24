@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math/bits"
 	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -14,13 +15,8 @@ type abTestHandler struct {
 	mu           sync.Mutex
 }
 
-type AbTestHandler interface {
-	Close()
-	AssignModelToUser(int) (RecommendationModel, error)
-}
-
-func makeAbTestHAndler() (AbTestHandler, error) {
-	const dbFilepath = "../ab_testing/ab_test_db.db"
+func makeAbTestHAndler() (ModelToUserHandler, error) {
+	const dbFilepath = "ab_testing/ab_test_db.db"
 	var handler abTestHandler
 	var err error
 	handler.dbConnection, err = sql.Open("sqlite3", dbFilepath)
@@ -28,10 +24,6 @@ func makeAbTestHAndler() (AbTestHandler, error) {
 		return nil, &InternalError{"could not open db", err}
 	}
 	return &handler, nil
-}
-
-func (handler *abTestHandler) Close() {
-	handler.dbConnection.Close()
 }
 
 func (handler *abTestHandler) AssignModelToUser(userID int) (RecommendationModel, error) {
@@ -53,6 +45,8 @@ func (handler *abTestHandler) AssignModelToUser(userID int) (RecommendationModel
 	return model, nil
 }
 
+const maxInt = (1<<bits.UintSize)/2 - 1
+
 func (handler *abTestHandler) findModelAndAssignToUser(userID int) (RecommendationModel, error) {
 	usersInModel := make(map[RecommendationModel]int)
 	rows, err := handler.dbConnection.Query("SELECT model_id, user_count FROM models")
@@ -70,7 +64,7 @@ func (handler *abTestHandler) findModelAndAssignToUser(userID int) (Recommendati
 	rows.Close()
 
 	var minModel RecommendationModel
-	minUserCount := 0
+	minUserCount := maxInt
 	for model, userCount := range usersInModel {
 		if userCount <= minUserCount {
 			minUserCount = userCount
