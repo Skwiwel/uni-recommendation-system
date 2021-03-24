@@ -13,9 +13,13 @@ def gen_adjacency_matrices(sessions_data: pd.DataFrame, boolean_matrices=True) -
     
     views_data = sessions_data[sessions_data['event_type'].str.contains('VIEW_PRODUCT')]
     buy_data = sessions_data[sessions_data['event_type'].str.contains('BUY_PRODUCT')]
-    
+   
     view_adjacency_matrix = pd.crosstab(views_data['user_id'], views_data['product_id'])
     buy_adjacency_matrix = pd.crosstab(buy_data['user_id'], buy_data['product_id'])
+
+    for item in items_in_sessions:
+        if item not in buy_adjacency_matrix:
+            buy_adjacency_matrix.insert(len(buy_adjacency_matrix.columns), item, False)
 
     if boolean_matrices:
         view_adjacency_matrix = view_adjacency_matrix.astype(bool)

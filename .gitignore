@@ -5,3 +5,4 @@
 .bin
 *.exe
 *.db
+recommendations/**/*.json
