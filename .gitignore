@@ -4,5 +4,6 @@
 .vscode
 .bin
 *.exe
+*.exe~
 *.db
 recommendations/**/*.json
