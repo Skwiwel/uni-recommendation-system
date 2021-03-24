@@ -1,24 +1,42 @@
-# IUM projekt - temat 2
+# Recommendation system
 
-## Treść zadania
-> Są osoby, które wchodzą na naszą stronę i nie mogą się zdecydować, którym produktom przyjrzeć się nieco lepiej. Może dało by się im coś polecić?
+A university project focused at engeenering an ML solution to a problem. Choosen was the subject of an recommendation system for an online shop.
+The publicly shared project repo contains no usable data. Sample data, cleaned of most of recognizable informaction, is located in `data_raw/`.
 
-### Zbiór danych 
-IUM21L_Zad_02_02 - rozpakowane w katalogu `data_raw/`, wyczyszczone w katalogu `data/`
+## Contributors
+ - [psawicki0](https://github.com/psawicki0)
+ - [Skwiwel](https://github.com/Skwiwel)
 
-## Regulamin
-- Wramach projektu trzeba dostarczyć:
-    - etap 1 - do _2021.04.18_ – możliwe, że będzie konieczne wykonanie więcej niż jednej iteracji tego etapu, pierwsza powinna zakończyć się do danego terminu (0-20pkt):
-        - definicja problemu biznesowego, zdefiniowanie zadania/zadań modelowania i wszystkich założeń, zaproponowania kryteriów sukcesu)
-        - analiza danych z perspektywy realizacji tych zadań (trzeba ocenić, czy dostarczone dane są wystarczające – może czegoś brakuje, może coś trzeba poprawić, domagać się innych danych, itp)
-    - etap 2 – do _2021.06.06_:
-        - dwa modele: model bazowy (najprostszy możliwy dla danego zadania) i bardziej zaawansowany model docelowy, oraz raport z pokazujący proces budowy modelu i porównujący wyniki (0-15pkt)
-        - implementacja aplikacji (w formie mikroserwisu), która pozwala na (0-15pkt):
-            1. serwowanie predykcji przy pomocy danego modelu
-            2. realizację eksperymentu A/B –w ramach którego porównywane będą oba modelei zbierane dane niezbędne do późniejszej oceny ich jakości
-        - materiały pokazujące, że implementacja działa
-- Rozwiązania należy przesłać mailem (pawel.zawistowski@pw.edu.pl):
-    - raporty/dokumentację w formie PDF lub notatników [jupyter](https://jupyter.org/) (do których zachęcam)
-    - implementację – w pliku zip
-    - proszę nie wysyłać formatu rar – serwer PW często oznacza takie wiadomości jako spam
-- Zachęcam do korzystania konsultacji (MS Teams) w przypadku jakichkolwiek wątpliwości – najpóźniej do 2021.05.28r – ostatni tydzień przed terminem traktujemy jako „finalny sprint”, podczas którego wszystkie ustalenia są już zamrożone.
+## Functionalities
+Two simple recommendation models:
+ - popularity based
+ - collaborative filtering based
+
+ Additionally a microservice serving the recommendations on a per user basis was implemented. The service offers running of a transparent (to the user) A/B test functionality for comparison of the aforementioned models. The service offers a JSON based RESTful interface.
+
+ ## Compiling
+ The data handling parts of the project are made using loose python scripts. To install the required Python libraries:
+ ```
+ python3 -m pip install -r requirements.txt
+ ```
+The microservice is implemented with go and internallu uses an SQLite database for A/B testing. To compile the service:
+```
+go get github.com/mattn/go-sqlite3
+cd ./microservice/go
+go build -o ./../../service.exe ./cmd
+```
+This compiles the microservice into `service.exe` located in the root directory of the repo. The `.exe` extension is mainly for compatibility with Windows.
+
+## Running
+The required data `sessions.jsonl` and `products.jsonl` needs to be located in `data_raw`.  
+For A/B testing the database in `ab_testing/` needs to be manually reset by removing the trailing `.init`.
+
+To run the service with just collaborative filtering based model:
+```
+./service.exe
+```
+Running with A/B testing enabled:
+```
+./service.exe --abtest
+```
+Data relevant for A/B testing is saved to the database.
