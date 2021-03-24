@@ -34,12 +34,19 @@ const (
 	modelIndexLimit
 )
 
+var pythonCommand = "py"
+
 const recommendationsDirectory = "recommendations/"
 const scriptsDirectory = "scripts/"
-const pythonCommand = "py"
 const genNumRecommendations = "50"
 
 func makeRecommendationService(abTestOn bool) (RecommendationService, error) {
+	var err error
+	pythonCommand, err = findPythonExecutable()
+	if err != nil {
+		return nil, err
+	}
+
 	var s recommendationService
 	s.recommendationDirs = map[RecommendationModel]string{
 		Popularity:    recommendationsDirectory + "popularity/",
@@ -52,7 +59,6 @@ func makeRecommendationService(abTestOn bool) (RecommendationService, error) {
 
 	var modelToUserHandler ModelToUserHandler
 	if abTestOn {
-		var err error
 		modelToUserHandler, err = makeAbTestHAndler()
 		if err != nil {
 			return nil, err
@@ -63,6 +69,17 @@ func makeRecommendationService(abTestOn bool) (RecommendationService, error) {
 	s.modelToUserHandler = modelToUserHandler
 
 	return &s, nil
+}
+
+func findPythonExecutable() (string, error) {
+	possiblePythonExeNames := []string{"py", "python3"}
+	for _, candidateCommand := range possiblePythonExeNames {
+		path, err := exec.LookPath(candidateCommand)
+		if err == nil {
+			return path, nil
+		}
+	}
+	return "", errors.New("could not locate a python executable")
 }
 
 type RecommendationsFromFile struct {
@@ -185,8 +202,15 @@ func (s *recommendationService) checkUserExists(userID int) bool {
 }
 
 func (s *recommendationService) GenRecommendations() {
-	log.Println("Generating recommendations")
+	log.Println("Cleaning data")
+	var cleanDataCommand = []string{pythonCommand, scriptsDirectory + "clean_data.py"}
+	c := exec.Command(cleanDataCommand[0], cleanDataCommand[1:]...)
+	if err := c.Run(); err != nil {
+		log.Println("Could not run data cleaning script: ", err)
+		return
+	}
 
+	log.Println("Generating recommendations")
 	for m := RecommendationModel(1); m < modelIndexLimit; m++ {
 		script, ok := s.modelScripts[m]
 		if !ok {
