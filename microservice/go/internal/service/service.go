@@ -8,7 +8,11 @@ import (
 )
 
 func Run(abTestOn bool) {
-	errChan := make(chan error, 10)
+	if abTestOn {
+		log.Println("Running in A/B test mode")
+	} else {
+		log.Println("Running on Collaborative model")
+	}
 
 	recommendationService, err := makeRecommendationService(abTestOn)
 	if err != nil {
@@ -22,6 +26,7 @@ func Run(abTestOn bool) {
 	serviceMux.HandleFunc("/recommendations", recommendationService.HttpHandler)
 	serviceServer := &http.Server{Addr: ":80", Handler: serviceMux}
 
+	errChan := make(chan error, 10)
 	go func() {
 		errChan <- serviceServer.ListenAndServe()
 	}()

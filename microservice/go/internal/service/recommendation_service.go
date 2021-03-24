@@ -133,8 +133,10 @@ func (s *recommendationService) HttpHandler(w http.ResponseWriter, r *http.Reque
 		recommendationsJsonFile, err := os.Open(filename)
 		defer recommendationsJsonFile.Close()
 		if err != nil {
-			log.Println("Could not open file <" + filename + ">: " + err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
+			// Somewhat normal due to the way users are checked for existance
+			// No recommendation file from this model was generated for this user
+			//log.Println("Could not open file <" + filename + ">: " + err.Error())
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
@@ -193,12 +195,15 @@ func parseNumRecommendations(query url.Values, w http.ResponseWriter) (int, erro
 }
 
 func (s *recommendationService) checkUserExists(userID int) bool {
-	// Hardcoded to search for a recommendation file in Popularity model
-	filename := s.recommendationDirs[Popularity] + fmt.Sprint(userID) + ".json"
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return false
+	for m := RecommendationModel(1); m < modelIndexLimit; m++ {
+		filename := s.recommendationDirs[m] + fmt.Sprint(userID) + ".json"
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			continue
+		}
+		return true
 	}
-	return true
+	// No such file found
+	return false
 }
 
 func (s *recommendationService) GenRecommendations() {
