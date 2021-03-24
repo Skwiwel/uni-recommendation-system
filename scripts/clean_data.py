@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import numpy as np
 import pandas as pd
 
@@ -19,7 +20,7 @@ def clean_products_data():
     data['price'] = data['price'].apply(lambda x: -x if x < 0 else x)
     # Fix too high prices; Assumes no price is higher than a million pln
     data['price'] = data['price'].apply(lambda x: x / 1e6 if x > 1e6 else x)
-    save_to_json(data, DATA_DIR_TARGET+PRODUCTS_FILENAME)
+    save_to_json(data, DATA_DIR_TARGET+PRODUCTS_FILENAME, DATA_DIR_TARGET)
 
 def clean_sessions_data():
     data = read_from_json(DATA_DIR_RAW+SESSIONS_FILENAME)
@@ -30,12 +31,14 @@ def clean_sessions_data():
             if session_data.size > 0:
                 data.loc[index, 'user_id'] = session_data['user_id'].values[0]
     data = data.dropna()
-    save_to_json(data, DATA_DIR_TARGET+SESSIONS_FILENAME)
+    save_to_json(data, DATA_DIR_TARGET+SESSIONS_FILENAME, DATA_DIR_TARGET)
 
 def read_from_json(filepath):
     return pd.read_json(filepath, convert_dates=False, lines=True)
 
-def save_to_json(df, filepath):
+def save_to_json(df, filepath, create_dir=None):
+    if create_dir is not None and not os.path.isdir(create_dir): 
+        os.mkdir(create_dir)
     df.to_json(filepath, orient='records', date_format='iso', lines=True)
 
 if __name__ == "__main__":
