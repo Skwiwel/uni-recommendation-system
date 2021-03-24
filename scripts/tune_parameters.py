@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from surprise import SVD, Dataset
 from surprise.model_selection import GridSearchCV
 from collaborative_filtering import prepare_data
