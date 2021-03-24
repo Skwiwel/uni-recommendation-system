@@ -42,6 +42,12 @@ Running with A/B testing enabled:
 ```
 Data relevant for A/B testing is saved to the database.
 
+The service interface takes in request via HTTP GET at the location `/recommendations`. The user for whom we are requesting recommendations should be specified by a `user_id` and the optionam number of recommendations by `num`.  
+For example:
+```
+curl -i "<service_address>/recommendations?user_id=106&num=10"
+```
+
 ## Docker container
 The microservice is also packed into a Docker container available at [DockerHub](https://hub.docker.com/r/skwiwel/uni-recommendation-system).  
 Running it will require mounting the `data_raw/` dir containing actual data as well as the `ab_testing` dir with a db for A/B testing.
@@ -56,4 +62,11 @@ docker run \
     --mount type=bind,source="$(pwd)"/ab_testing,target=/uni-recommendation-system/ab_testing \
     skwiwel/uni-recommendation-system --abtest
 ```
-The last `--abtest` runs the service in A/B testing mode.
+The last `--abtest` flag runs the service in A/B testing mode.
+
+## System demo
+The service is (hopefully still) currently running on a cloud container under the public ip `130.61.188.211`.  
+You can check out how it's working by requesting recommendations, e.g.:
+```
+curl -i "130.61.188.211/recommendations?user_id=106&num=10"
+```
