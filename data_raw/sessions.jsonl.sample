@@ -1,0 +1,11 @@
+{"session_id": 100001, "timestamp": "2021-01-26T00:42:30", "user_id": null, "product_id": 1001, "event_type": "VIEW_PRODUCT", "offered_discount": 15, "purchase_id": null}
+{"session_id": 100002, "timestamp": "2021-01-05T04:28:35", "user_id": 102, "product_id": 1308, "event_type": "VIEW_PRODUCT", "offered_discount": 5, "purchase_id": null}
+{"session_id": 100002, "timestamp": "2021-01-05T04:29:28", "user_id": 102, "product_id": 1297, "event_type": "VIEW_PRODUCT", "offered_discount": 5, "purchase_id": null}
+{"session_id": 100002, "timestamp": "2021-01-05T04:31:43", "user_id": 102, "product_id": 1291, "event_type": "VIEW_PRODUCT", "offered_discount": 5, "purchase_id": null}
+{"session_id": 100002, "timestamp": "2021-01-05T04:34:16", "user_id": 102, "product_id": 1313, "event_type": "VIEW_PRODUCT", "offered_discount": 5, "purchase_id": null}
+{"session_id": 100003, "timestamp": "2021-02-02T18:37:42", "user_id": 102, "product_id": 1072, "event_type": "VIEW_PRODUCT", "offered_discount": 0, "purchase_id": null}
+{"session_id": 100003, "timestamp": "2021-02-02T18:42:01", "user_id": 102, "product_id": 1074, "event_type": "VIEW_PRODUCT", "offered_discount": 0, "purchase_id": null}
+{"session_id": 100003, "timestamp": "2021-02-02T18:46:42", "user_id": 102, "product_id": 1201, "event_type": "VIEW_PRODUCT", "offered_discount": 0, "purchase_id": null}
+{"session_id": 100003, "timestamp": "2021-02-02T18:50:51", "user_id": 102, "product_id": 1073, "event_type": "VIEW_PRODUCT", "offered_discount": 0, "purchase_id": null}
+{"session_id": 100003, "timestamp": "2021-02-02T18:55:30", "user_id": 102, "product_id": 1222, "event_type": "VIEW_PRODUCT", "offered_discount": 0, "purchase_id": null}
+{"session_id": 100004, "timestamp": "2021-01-27T18:45:15", "user_id": 102, "product_id": 1078, "event_type": "VIEW_PRODUCT", "offered_discount": 0, "purchase_id": null}
