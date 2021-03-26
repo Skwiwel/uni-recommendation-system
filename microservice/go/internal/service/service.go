@@ -1,20 +1,21 @@
 package service
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 )
 
-func Run(abTestOn bool) {
-	if abTestOn {
-		log.Println("Running in A/B test mode")
-	} else {
-		log.Println("Running on Collaborative model")
+func Run(mode string) {
+	if err := checkModeAndPrintConfirmationMessage(mode); err != nil {
+		fmt.Fprintf(os.Stderr, "error: unrecognized mode", err.Error())
+		os.Exit(1)
 	}
 
-	recommendationService, err := makeRecommendationService(abTestOn)
+	recommendationService, err := makeRecommendationService(mode)
 	if err != nil {
 		log.Println("Could not create a recommendation service: " + err.Error())
 		os.Exit(1)
@@ -41,6 +42,20 @@ func Run(abTestOn bool) {
 			}
 		}
 	}
+}
+
+func checkModeAndPrintConfirmationMessage(mode string) error {
+	switch mode {
+	case "popularity":
+		fmt.Println("Running on popularity based model")
+	case "collaborative":
+		fmt.Println("Running on collaborative filtering based model")
+	case "abtest":
+		fmt.Println("Running in A/B test mode")
+	default:
+		return errors.New("invalid mode argument")
+	}
+	return nil
 }
 
 func runRecommendationGenInIntervals(interval time.Duration, s RecommendationService) {

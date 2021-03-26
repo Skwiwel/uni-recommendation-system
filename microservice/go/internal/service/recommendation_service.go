@@ -40,7 +40,7 @@ const recommendationsDirectory = "recommendations/"
 const scriptsDirectory = "scripts/"
 const genNumRecommendations = "50"
 
-func makeRecommendationService(abTestOn bool) (RecommendationService, error) {
+func makeRecommendationService(mode string) (RecommendationService, error) {
 	var err error
 	pythonCommand, err = findPythonExecutable()
 	if err != nil {
@@ -58,13 +58,18 @@ func makeRecommendationService(abTestOn bool) (RecommendationService, error) {
 	}
 
 	var modelToUserHandler ModelToUserHandler
-	if abTestOn {
+	switch mode {
+	case "popularity":
+		modelToUserHandler = makeStaticModelToUserHandler(Popularity)
+	case "collaborative":
+		modelToUserHandler = makeStaticModelToUserHandler(Collaborative)
+	case "abtest":
 		modelToUserHandler, err = makeAbTestHAndler()
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		modelToUserHandler = makeStaticModelToUserHandler(Collaborative)
+	default:
+		return nil, errors.New("invalid mode argument")
 	}
 	s.modelToUserHandler = modelToUserHandler
 
