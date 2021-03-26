@@ -37,8 +37,7 @@ def category_commonality(a: list, b: list) -> int:
         j = j + 1
     return i
 
-def init() -> (dict, dict, pd.DataFrame, pd.DataFrame):
-    sessions_data, products_data = load_sessions_products()
+def most_popular_init(sessions_data: pd.DataFrame, products_data: pd.DataFrame) -> (dict, dict, pd.DataFrame, pd.DataFrame):
     views_data, purchases_data = gen_adjacency_matrices(sessions_data)
 
     sessions_data = sessions_data[sessions_data['event_type'].str.contains('VIEW_PRODUCT')]
@@ -74,7 +73,7 @@ def init() -> (dict, dict, pd.DataFrame, pd.DataFrame):
 
     return (sorted_categories, most_popular_items, views_data, purchases_data)
 
-def recommendations(categories: dict, items: dict, views: pd.DataFrame, purchases: pd.DataFrame, uid: int, n: int = 10) -> list:
+def most_popular_recommendations(categories: dict, items: dict, views: pd.DataFrame, purchases: pd.DataFrame, uid: int, n: int = 10) -> list:
     result = []
     viewed = []
     purchased = []
@@ -95,18 +94,18 @@ def recommendations(categories: dict, items: dict, views: pd.DataFrame, purchase
     return result
 
 def save_to_files(recommendation_per_user: int = 10):
-    categories, items, views, purchases = init()
+    sessions, products = load_sessions_products()
+    categories, items, views, purchases = most_popular_init(sessions, products)
     for uid in categories.keys():
         data = {}
-        data['recommendations'] = recommendations(categories, items, views, purchases, uid, recommendation_per_user)
+        data['recommendations'] = most_popular_recommendations(categories, items, views, purchases, uid, recommendation_per_user)
         if not os.path.isdir(SAVE_PATH): 
             os.makedirs(SAVE_PATH)
         with open(SAVE_PATH + str(uid) + '.json', 'w') as outfile:
             json.dump(data, outfile)
 
-
 if __name__ == "__main__":
     n = 10
     if len(sys.argv) > 1:
-        n = sys.argv[1]
-    save_to_files(int(n))
+        n = int(sys.argv[1])
+    save_to_files(n)

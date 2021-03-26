@@ -23,6 +23,10 @@ def gen_adjacency_matrices(sessions_data: pd.DataFrame, boolean_matrices=True) -
         if item not in buy_adjacency_matrix:
             buy_adjacency_matrix.insert(len(buy_adjacency_matrix.columns), item, False)
 
+    for user in users_in_sessions:
+        if user not in buy_adjacency_matrix.index.to_list():
+            buy_adjacency_matrix.loc[user,:] = False
+
     if boolean_matrices:
         view_adjacency_matrix = view_adjacency_matrix.astype(bool)
         buy_adjacency_matrix = buy_adjacency_matrix.astype(bool)
