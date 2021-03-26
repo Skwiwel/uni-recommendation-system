@@ -48,8 +48,8 @@ For example:
 curl -i "<service_address>/recommendations?user_id=106&num=10"
 ```
 
-## Docker container
-The microservice is also packed into a Docker container available at [DockerHub](https://hub.docker.com/r/skwiwel/uni-recommendation-system).  
+## Docker image
+The microservice is also packed into a Docker image available at [DockerHub](https://hub.docker.com/r/skwiwel/uni-recommendation-system).  
 Running it will require mounting the `data_raw/` dir containing actual data as well as the `ab_testing` dir with a db for A/B testing.
 
 To run:
@@ -60,9 +60,9 @@ docker run \
     -p 80:80 \
     --mount type=bind,source="$(pwd)"/data_raw,target=/uni-recommendation-system/data_raw,readonly \
     --mount type=bind,source="$(pwd)"/ab_testing,target=/uni-recommendation-system/ab_testing \
-    skwiwel/uni-recommendation-system --abtest
+    skwiwel/uni-recommendation-system --mode abtest
 ```
-The last `--abtest` flag runs the service in A/B testing mode.
+The last `--mode abtest` argument is passed to the service executable and runs the service in A/B testing mode.
 
 ## System demo
 The service is (hopefully still) currently running on a cloud container under the public ip `130.61.188.211`.  
