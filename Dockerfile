@@ -10,6 +10,8 @@ FROM python:3-slim
 RUN apt-get update -y && apt-get install apt-file -y && apt-file update && apt-get install -y build-essential
 COPY ./requirements.txt "/uni-recommendation-system/"
 RUN pip install --no-cache-dir -r /uni-recommendation-system/requirements.txt
+# gcc and such no longer needed
+RUN apt-get remove --auto-remove -y build-essential
 COPY --from=golang-builder /service.exe "/uni-recommendation-system/"
 COPY . "/uni-recommendation-system/"
 WORKDIR "/uni-recommendation-system/"
