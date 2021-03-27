@@ -1,21 +1,28 @@
 import sys
 import pandas as pd
 from multiprocessing import Process, Queue
+from random import sample
 from adjacency_matrix import load_sessions_products, gen_adjacency_matrices
 from most_popular import most_popular_init, most_popular_recommendations
 from collaborative_filtering import cf_train, cf_recommendations
 
+MODEL_MOST_POPULAR = 'mp'
+MODEL_COLLABORATIVE_FILTERING = 'cf'
+MODEL_RANDOM = 'rand'
+
 def test_user(session_data: pd.DataFrame, products_data: pd.DataFrame, training_set: dict, views: pd.DataFrame, purchases: pd.DataFrame, user: int,
-q: Queue, model: str = 'cf', recommend:int = 20):
+q: Queue, model: str, recommend:int):
     train_session = session_data[(session_data['user_id'] != user) | (session_data['product_id'].isin(training_set[user]))]
     result = []
 
-    if model == 'mp':
+    if model == MODEL_MOST_POPULAR:
         categories, items, views_user, purchases_user = most_popular_init(train_session, products_data)
         result = most_popular_recommendations(categories, items, views_user, purchases_user, user, recommend)
-    elif model == 'cf':
+    elif model == MODEL_COLLABORATIVE_FILTERING:
         predictions, views_user, purchases_user = cf_train(train_session)
         result = cf_recommendations(predictions, views_user, purchases_user, user, recommend)
+    elif model == MODEL_RANDOM:
+        result = sample(views.columns.to_list(), recommend)
 
     i = 0
     correct_views = 0.0
@@ -29,7 +36,7 @@ q: Queue, model: str = 'cf', recommend:int = 20):
 
     q.put(correct_views / (1 + abs(i - recommend)) + 9.0 * correct_purchases / (1 + abs(i - recommend)))
 
-def test(model: str = 'cf', recommend: int = 20) -> float:
+def test(model: str, recommend: int) -> float:
     session_data, products_data = load_sessions_products()
     views, purchases = gen_adjacency_matrices(session_data)
 
@@ -61,13 +68,24 @@ def test(model: str = 'cf', recommend: int = 20) -> float:
     return test_result
 
 if __name__ == '__main__':
-    model = 'cf'
+    model = MODEL_COLLABORATIVE_FILTERING
     n = 20
     if len(sys.argv) > 1:
-        if sys.argv[1] in ['mp', 'most_popular']:
-            model = 'mp'
-        elif sys.argv[1] in ['cf', 'collaborative_filtering']:
-            model = 'cf'
+        if sys.argv[1] in [MODEL_MOST_POPULAR, 'most_popular']:
+            model = MODEL_MOST_POPULAR
+        elif sys.argv[1] in [MODEL_COLLABORATIVE_FILTERING, 'collaborative_filtering']:
+            model = MODEL_COLLABORATIVE_FILTERING
+        elif sys.argv[1] in [MODEL_RANDOM, 'random']:
+            model = MODEL_RANDOM
         if len(sys.argv) > 2:
             n = int(sys.argv[2])
-    print('\n', test(model, n))
+
+    result = 0.0
+    if model == MODEL_RANDOM:
+        runs = 10
+        for i in range(runs):
+            result = result + test(model, n) / runs
+    else:
+        result = test(model, n)
+        
+    print('\n', result)
