@@ -1,14 +1,12 @@
 import sys
 import pandas as pd
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from adjacency_matrix import load_sessions_products, gen_adjacency_matrices
 from most_popular import most_popular_init, most_popular_recommendations
 from collaborative_filtering import cf_train, cf_recommendations
 
-test_results = {}
-
 def test_user(session_data: pd.DataFrame, products_data: pd.DataFrame, training_set: dict, views: pd.DataFrame, purchases: pd.DataFrame, user: int,
-model: str = 'cf', recommend:int = 20):
+q: Queue, model: str = 'cf', recommend:int = 20):
     train_session = session_data[(session_data['user_id'] != user) | (session_data['product_id'].isin(training_set[user]))]
     result = []
 
@@ -29,7 +27,7 @@ model: str = 'cf', recommend:int = 20):
             correct_purchases = correct_purchases + 1
         i = i + 1
 
-    test_results[user] = correct_views / (1 + abs(i - recommend)) + 9.0 * correct_purchases / (1 + abs(i - recommend))
+    q.put(correct_views / (1 + abs(i - recommend)) + 9.0 * correct_purchases / (1 + abs(i - recommend)))
 
 def test(model: str = 'cf', recommend: int = 20) -> float:
     session_data, products_data = load_sessions_products()
@@ -49,13 +47,14 @@ def test(model: str = 'cf', recommend: int = 20) -> float:
     curr = 0
 
     processes = {}
+    q = Queue()
     for user in training_set.keys():
-        processes[user] = Process(target=test_user, args=(session_data, products_data, training_set, views, purchases, user, model, recommend,))
+        processes[user] = Process(target=test_user, args=(session_data, products_data, training_set, views, purchases, user, q, model, recommend,))
         processes[user].start()
     
     for user in training_set.keys():
         processes[user].join()
-        test_result = test_result + test_results[user]
+        test_result = test_result + q.get()
         curr = curr + 1
 
         print('Progress: ', curr, ' / ', users, 'Result: ', test_result, end='\r')
@@ -71,4 +70,4 @@ if __name__ == '__main__':
             model = 'cf'
         if len(sys.argv) > 2:
             n = int(sys.argv[2])
-    test(model, n)
+    print('\n', test(model, n))
