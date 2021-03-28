@@ -51,6 +51,7 @@ def most_popular_init(sessions_data: pd.DataFrame, products_data: pd.DataFrame) 
     category_popularity = pd.pivot_table(category_popularity, index='category_path', columns='user_id', aggfunc=np.count_nonzero)
     
     category_popularity_buys = buy_sessions_data.join(products_data.set_index('product_id'), on='product_id').drop('price', 'columns')
+    item_popularity_buys = category_popularity_buys
     category_popularity_buys = pd.pivot_table(category_popularity_buys, index='category_path', columns='user_id', aggfunc=np.count_nonzero)
     category_popularity = category_popularity + 9.0 * category_popularity_buys
 
@@ -73,6 +74,8 @@ def most_popular_init(sessions_data: pd.DataFrame, products_data: pd.DataFrame) 
         sorted_categories[column[1]] = ordered
 
     item_popularity = pd.pivot_table(item_popularity, index='product_id', columns='category_path', aggfunc=np.count_nonzero)
+    item_popularity_buys = pd.pivot_table(item_popularity_buys, index='product_id', columns='category_path', aggfunc=np.count_nonzero)
+    item_popularity = item_popularity + 9.0 * item_popularity_buys
 
     # Most popular items for each category
     most_popular_items = {}
