@@ -12,12 +12,12 @@ SAVE_PATH = 'recommendations/collaborative/'
 
 def prepare_data(sessions_data: pd.DataFrame) -> (Dataset, pd.DataFrame, pd.DataFrame):
     view_matrix, buy_matrix = am.gen_adjacency_matrices(sessions_data)
-    combined_matrix = view_matrix + buy_matrix * 9
+    combined_matrix = view_matrix.astype(int) + buy_matrix.astype(int)
 
     ratings = combined_matrix.stack().reorder_levels(('user_id', 'product_id')).to_frame('rating').reset_index()
     ratings = ratings.drop(ratings[ratings.rating == 0].index)
 
-    reader = Reader(rating_scale=(0.0, 10.0))
+    reader = Reader(rating_scale=(0.0, 2.0))
     return (Dataset.load_from_df(ratings, reader), view_matrix, buy_matrix)
 
 def cf_train(sessions_data: pd.DataFrame) -> (list, pd.DataFrame, pd.DataFrame):
