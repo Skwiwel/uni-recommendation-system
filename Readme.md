@@ -32,13 +32,9 @@ This compiles the microservice into `service.exe` located in the root directory 
 The required data `sessions.jsonl` and `products.jsonl` needs to be located in `data_raw`.  
 For A/B testing the database in `ab_testing/` needs to be manually reset by removing the trailing `.init`.
 
-To run the service with just collaborative filtering based model:
-```
-./service.exe
-```
 Running with A/B testing enabled:
 ```
-./service.exe --abtest
+./service.exe --mode abtest
 ```
 Data relevant for A/B testing is saved to the database.
 
