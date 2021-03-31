@@ -24,19 +24,17 @@ q: Queue, model: str, recommend:int):
     elif model == MODEL_RANDOM:
         result = sample(views.columns.to_list(), recommend)
 
-    i = 0
-    correct_views = 0.0
-    correct_purchases = 0.0
-    while i < recommend and result[i] not in training_set[user]:
-        if views.loc[user, result[i]]:
-            correct_views = correct_views + 1
-        if purchases.loc[user, result[i]]:
-            correct_purchases = correct_purchases + 1
-        i = i + 1
+    relevant = 0
+    for item in result:
+        if purchases.loc[user, item] and item not in training_set[user]:
+            relevant = relevant + 1
 
-    q.put(correct_views / (1 + abs(i - recommend)) + 9.0 * correct_purchases / (1 + abs(i - recommend)))
+    # precision@20
+    q.put(relevant / recommend)
+    # recall@20
+    q.put(relevant / purchases.loc[user].sum())
 
-def test(model: str, recommend: int) -> float:
+def test(model: str, recommend: int) -> (float, float):
     session_data, products_data = load_sessions_products()
     views, purchases = gen_adjacency_matrices(session_data)
 
@@ -49,7 +47,8 @@ def test(model: str, recommend: int) -> float:
         elif len(training_set[user]) < 10:
             training_set[user].append(product)
     
-    test_result = 0.0
+    precision = 0.0
+    recall = 0.0
     users = len(training_set.keys())
     curr = 0
 
@@ -61,11 +60,12 @@ def test(model: str, recommend: int) -> float:
     
     for user in training_set.keys():
         processes[user].join()
-        test_result = test_result + q.get()
+        precision = precision + q.get() / users
+        recall = recall + q.get() / users
         curr = curr + 1
 
-        print('Progress: ', curr, ' / ', users, 'Result: ', test_result, end='\r')
-    return test_result
+        print('Progress:', curr, '/', users, end='\r')
+    return precision, recall
 
 if __name__ == '__main__':
     model = MODEL_COLLABORATIVE_FILTERING
@@ -80,12 +80,15 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             n = int(sys.argv[2])
 
-    result = 0.0
+    precision = 0.0
+    recall = 0.0
     if model == MODEL_RANDOM:
         runs = 10
         for i in range(runs):
-            result = result + test(model, n) / runs
+            precision_run, recall_run = test(model, n)
+            precision = precision + precision_run / runs
+            recall = recall + recall_run / runs
     else:
-        result = test(model, n)
+        precision, recall = test(model, n)
         
-    print('\n', result)
+    print('\nPrecision@',n,':', precision, 'Recall@',n,':', recall)
