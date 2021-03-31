@@ -11,7 +11,7 @@ MODEL_COLLABORATIVE_FILTERING = 'cf'
 MODEL_RANDOM = 'rand'
 
 def test_user(session_data: pd.DataFrame, products_data: pd.DataFrame, training_set: dict, views: pd.DataFrame, purchases: pd.DataFrame, user: int,
-q: Queue, model: str, recommend:int):
+q: Queue, model: str, recommend: int, cf_params: list = []):
     train_session = session_data[(session_data['user_id'] != user) | (session_data['product_id'].isin(training_set[user]))]
     result = []
 
@@ -19,7 +19,7 @@ q: Queue, model: str, recommend:int):
         categories, items, views_user, purchases_user = most_popular_init(train_session, products_data)
         result = most_popular_recommendations(categories, items, views_user, purchases_user, user, recommend)
     elif model == MODEL_COLLABORATIVE_FILTERING:
-        predictions, views_user, purchases_user = cf_train(train_session)
+        predictions, views_user, purchases_user = cf_train(train_session, cf_params)
         result = cf_recommendations(predictions, views_user, purchases_user, user, recommend)
     elif model == MODEL_RANDOM:
         result = sample(views.columns.to_list(), recommend)
@@ -29,13 +29,12 @@ q: Queue, model: str, recommend:int):
         if purchases.loc[user, item] and item not in training_set[user]:
             relevant = relevant + 1
 
-    # precision@20
+    # precision@k
     q.put(relevant / recommend)
-    # recall@20
+    # recall@k
     q.put(relevant / purchases.loc[user].sum())
 
-def test(model: str, recommend: int) -> (float, float):
-    session_data, products_data = load_sessions_products()
+def test(model: str, recommend: int, session_data: pd.DataFrame, products_data: pd.DataFrame, cf_params: list = [], quiet: bool = False) -> (float, float):
     views, purchases = gen_adjacency_matrices(session_data)
 
     training_set = {}
@@ -55,7 +54,7 @@ def test(model: str, recommend: int) -> (float, float):
     processes = {}
     q = Queue()
     for user in training_set.keys():
-        processes[user] = Process(target=test_user, args=(session_data, products_data, training_set, views, purchases, user, q, model, recommend,))
+        processes[user] = Process(target=test_user, args=(session_data, products_data, training_set, views, purchases, user, q, model, recommend, cf_params,))
         processes[user].start()
     
     for user in training_set.keys():
@@ -64,7 +63,8 @@ def test(model: str, recommend: int) -> (float, float):
         recall = recall + q.get() / users
         curr = curr + 1
 
-        print('Progress:', curr, '/', users, end='\r')
+        if quiet == False:
+            print('Progress:', curr, '/', users, end='\r')
     return precision, recall
 
 if __name__ == '__main__':
@@ -80,15 +80,17 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             n = int(sys.argv[2])
 
+    session_data, products_data = load_sessions_products()
+
     precision = 0.0
     recall = 0.0
     if model == MODEL_RANDOM:
         runs = 10
         for i in range(runs):
-            precision_run, recall_run = test(model, n)
+            precision_run, recall_run = test(model, n, session_data, products_data)
             precision = precision + precision_run / runs
             recall = recall + recall_run / runs
     else:
-        precision, recall = test(model, n)
+        precision, recall = test(model, n, session_data, products_data)
         
     print('\nPrecision@',n,':', precision, 'Recall@',n,':', recall)
