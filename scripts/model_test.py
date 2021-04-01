@@ -34,7 +34,7 @@ q: Queue, model: str, recommend: int, cf_params: list = []):
     # recall@k
     q.put(relevant / max(1, purchases.loc[user].sum()))
 
-def test(model: str, recommend: int, session_data: pd.DataFrame, products_data: pd.DataFrame, cf_params: list = [], quiet: bool = False) -> (float, float):
+def test(model: str, recommend: int, session_data: pd.DataFrame, products_data: pd.DataFrame, jobs: int, cf_params: list = [], quiet: bool = False) -> (float, float):
     views, purchases = gen_adjacency_matrices(session_data)
 
     training_set = {}
@@ -49,36 +49,43 @@ def test(model: str, recommend: int, session_data: pd.DataFrame, products_data: 
     precision = 0.0
     recall = 0.0
     users = len(training_set.keys())
+    users_list = list(training_set.keys())
     curr = 0
 
     processes = {}
     q = Queue()
-    for user in training_set.keys():
-        processes[user] = Process(target=test_user, args=(session_data, products_data, training_set, views, purchases, user, q, model, recommend, cf_params,))
-        processes[user].start()
-    
-    for user in training_set.keys():
-        processes[user].join()
-        precision = precision + q.get() / users
-        recall = recall + q.get() / users
-        curr = curr + 1
+    for i in range(0, users, jobs):
+        for j in range(i, min(users, i + jobs)):
+            user = users_list[j]
+            processes[user] = Process(target=test_user, args=(session_data, products_data, training_set, views, purchases, user, q, model, recommend, cf_params,))
+            processes[user].start()
+        
+        for j in range(i, min(users, i + jobs)):
+            user = users_list[j]
+            processes[user].join()
+            precision = precision + q.get() / users
+            recall = recall + q.get() / users
+            curr = curr + 1
 
-        if quiet == False:
-            print('Progress:', curr, '/', users, end='\r')
+            if quiet == False:
+                print('Progress:', curr, '/', users, end='\r')
     return precision, recall
 
 if __name__ == '__main__':
     model = MODEL_COLLABORATIVE_FILTERING
-    n = 20
-    if len(sys.argv) > 1:
-        if sys.argv[1] in [MODEL_MOST_POPULAR, 'most_popular']:
+    k = 10
+    jobs = 8
+    for i in range(1, len(sys.argv)):
+        if sys.argv[i] in [MODEL_MOST_POPULAR, 'most_popular']:
             model = MODEL_MOST_POPULAR
-        elif sys.argv[1] in [MODEL_COLLABORATIVE_FILTERING, 'collaborative_filtering']:
+        elif sys.argv[i] in [MODEL_COLLABORATIVE_FILTERING, 'collaborative_filtering']:
             model = MODEL_COLLABORATIVE_FILTERING
-        elif sys.argv[1] in [MODEL_RANDOM, 'random']:
+        elif sys.argv[i] in [MODEL_RANDOM, 'random']:
             model = MODEL_RANDOM
-        if len(sys.argv) > 2:
-            n = int(sys.argv[2])
+        if sys.argv[i].startswith('-j'):
+            jobs = int(sys.argv[i][2:])
+        elif sys.argv[i].startswith('-k'):
+            k = int(sys.argv[i][2:])
 
     session_data, products_data = load_sessions_products()
 
@@ -87,10 +94,10 @@ if __name__ == '__main__':
     if model == MODEL_RANDOM:
         runs = 10
         for i in range(runs):
-            precision_run, recall_run = test(model, n, session_data, products_data)
+            precision_run, recall_run = test(model, k, session_data, products_data, jobs)
             precision = precision + precision_run / runs
             recall = recall + recall_run / runs
     else:
-        precision, recall = test(model, n, session_data, products_data)
+        precision, recall = test(model, k, session_data, products_data, jobs)
         
-    print('\nPrecision@',n,':', precision, 'Recall@',n,':', recall)
+    print('\nPrecision@',k,':', precision, 'Recall@',k,':', recall)
