@@ -27,10 +27,10 @@ def cf_train(sessions_data: pd.DataFrame, params: list = []) -> (list, pd.DataFr
     if len(params) < 6:
         n_factors = 100
         n_epochs = 20
-        init_mean = 0
-        init_std_dev = 0.1
-        lr_all = 0.005
-        reg_all = 0.02
+        init_mean = 0.059503354012422675
+        init_std_dev = 0.6005459144664553
+        lr_all = 0.04816860899906844
+        reg_all = 0.12499843776413044
     else:
         n_factors = params[0]
         n_epochs = params[1]
