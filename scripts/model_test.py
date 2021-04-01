@@ -32,7 +32,7 @@ q: Queue, model: str, recommend: int, cf_params: list = []):
     # precision@k
     q.put(relevant / recommend)
     # recall@k
-    q.put(relevant / purchases.loc[user].sum())
+    q.put(relevant / max(1, purchases.loc[user].sum()))
 
 def test(model: str, recommend: int, session_data: pd.DataFrame, products_data: pd.DataFrame, cf_params: list = [], quiet: bool = False) -> (float, float):
     views, purchases = gen_adjacency_matrices(session_data)

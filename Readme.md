@@ -5,7 +5,7 @@ A university project focused on engineering an ML solution to a problem. Chosen 
 The publicly shared project repo contains no usable data. Sample data, cleaned of most of recognizable information, is located in `data_raw/`.
 
 ## Contributors
- - [psawicki0](https://github.com/psawicki0)
+ - [p-sawicki](https://github.com/p-sawicki)
  - [Skwiwel](https://github.com/Skwiwel)
 
 ## Functionalities
