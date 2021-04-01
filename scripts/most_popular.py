@@ -40,12 +40,21 @@ def category_commonality(a: list, b: list) -> int:
 def most_popular_init(sessions_data: pd.DataFrame, products_data: pd.DataFrame) -> (dict, dict, pd.DataFrame, pd.DataFrame):
     views_data, purchases_data = gen_adjacency_matrices(sessions_data)
 
+    buy_sessions_data = sessions_data[sessions_data['event_type'].str.contains('BUY_PRODUCT')]
+    buy_sessions_data = buy_sessions_data.drop(['session_id', 'timestamp', 'event_type'], 'columns')
+
     sessions_data = sessions_data[sessions_data['event_type'].str.contains('VIEW_PRODUCT')]
     sessions_data = sessions_data.drop(['session_id', 'timestamp', 'event_type'], 'columns').drop_duplicates()
 
     category_popularity = sessions_data.join(products_data.set_index('product_id'), on='product_id').drop('price', 'columns')
     item_popularity = category_popularity
     category_popularity = pd.pivot_table(category_popularity, index='category_path', columns='user_id', aggfunc=np.count_nonzero)
+    
+    category_popularity_buys = buy_sessions_data.join(products_data.set_index('product_id'), on='product_id').drop('price', 'columns')
+    item_popularity_buys = category_popularity_buys
+    category_popularity_buys = pd.pivot_table(category_popularity_buys, index='category_path', columns='user_id', aggfunc=np.count_nonzero)
+    category_popularity = category_popularity + 9.0 * category_popularity_buys
+
     similar_categories = get_similar_categories(category_popularity.index.to_list())
 
     # Ordered categories for each user according to similarity to most popular category and popularity of itself
@@ -65,6 +74,8 @@ def most_popular_init(sessions_data: pd.DataFrame, products_data: pd.DataFrame) 
         sorted_categories[column[1]] = ordered
 
     item_popularity = pd.pivot_table(item_popularity, index='product_id', columns='category_path', aggfunc=np.count_nonzero)
+    item_popularity_buys = pd.pivot_table(item_popularity_buys, index='product_id', columns='category_path', aggfunc=np.count_nonzero)
+    item_popularity = item_popularity + 9.0 * item_popularity_buys
 
     # Most popular items for each category
     most_popular_items = {}

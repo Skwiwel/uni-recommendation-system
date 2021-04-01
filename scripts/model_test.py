@@ -11,7 +11,7 @@ MODEL_COLLABORATIVE_FILTERING = 'cf'
 MODEL_RANDOM = 'rand'
 
 def test_user(session_data: pd.DataFrame, products_data: pd.DataFrame, training_set: dict, views: pd.DataFrame, purchases: pd.DataFrame, user: int,
-q: Queue, model: str, recommend:int):
+q: Queue, model: str, recommend: int, cf_params: list = []):
     train_session = session_data[(session_data['user_id'] != user) | (session_data['product_id'].isin(training_set[user]))]
     result = []
 
@@ -19,25 +19,22 @@ q: Queue, model: str, recommend:int):
         categories, items, views_user, purchases_user = most_popular_init(train_session, products_data)
         result = most_popular_recommendations(categories, items, views_user, purchases_user, user, recommend)
     elif model == MODEL_COLLABORATIVE_FILTERING:
-        predictions, views_user, purchases_user = cf_train(train_session)
+        predictions, views_user, purchases_user = cf_train(train_session, cf_params)
         result = cf_recommendations(predictions, views_user, purchases_user, user, recommend)
     elif model == MODEL_RANDOM:
         result = sample(views.columns.to_list(), recommend)
 
-    i = 0
-    correct_views = 0.0
-    correct_purchases = 0.0
-    while i < recommend and result[i] not in training_set[user]:
-        if views.loc[user, result[i]]:
-            correct_views = correct_views + 1
-        if purchases.loc[user, result[i]]:
-            correct_purchases = correct_purchases + 1
-        i = i + 1
+    relevant = 0
+    for item in result:
+        if purchases.loc[user, item] and item not in training_set[user]:
+            relevant = relevant + 1
 
-    q.put(correct_views / (1 + abs(i - recommend)) + 9.0 * correct_purchases / (1 + abs(i - recommend)))
+    # precision@k
+    q.put(relevant / recommend)
+    # recall@k
+    q.put(relevant / max(1, purchases.loc[user].sum()))
 
-def test(model: str, recommend: int) -> float:
-    session_data, products_data = load_sessions_products()
+def test(model: str, recommend: int, session_data: pd.DataFrame, products_data: pd.DataFrame, cf_params: list = [], quiet: bool = False) -> (float, float):
     views, purchases = gen_adjacency_matrices(session_data)
 
     training_set = {}
@@ -49,23 +46,26 @@ def test(model: str, recommend: int) -> float:
         elif len(training_set[user]) < 10:
             training_set[user].append(product)
     
-    test_result = 0.0
+    precision = 0.0
+    recall = 0.0
     users = len(training_set.keys())
     curr = 0
 
     processes = {}
     q = Queue()
     for user in training_set.keys():
-        processes[user] = Process(target=test_user, args=(session_data, products_data, training_set, views, purchases, user, q, model, recommend,))
+        processes[user] = Process(target=test_user, args=(session_data, products_data, training_set, views, purchases, user, q, model, recommend, cf_params,))
         processes[user].start()
     
     for user in training_set.keys():
         processes[user].join()
-        test_result = test_result + q.get()
+        precision = precision + q.get() / users
+        recall = recall + q.get() / users
         curr = curr + 1
 
-        print('Progress: ', curr, ' / ', users, 'Result: ', test_result, end='\r')
-    return test_result
+        if quiet == False:
+            print('Progress:', curr, '/', users, end='\r')
+    return precision, recall
 
 if __name__ == '__main__':
     model = MODEL_COLLABORATIVE_FILTERING
@@ -80,12 +80,17 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             n = int(sys.argv[2])
 
-    result = 0.0
+    session_data, products_data = load_sessions_products()
+
+    precision = 0.0
+    recall = 0.0
     if model == MODEL_RANDOM:
         runs = 10
         for i in range(runs):
-            result = result + test(model, n) / runs
+            precision_run, recall_run = test(model, n, session_data, products_data)
+            precision = precision + precision_run / runs
+            recall = recall + recall_run / runs
     else:
-        result = test(model, n)
+        precision, recall = test(model, n, session_data, products_data)
         
-    print('\n', result)
+    print('\nPrecision@',n,':', precision, 'Recall@',n,':', recall)
