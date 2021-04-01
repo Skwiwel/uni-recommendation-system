@@ -6,7 +6,7 @@ from model_test import test
 from collaborative_filtering import prepare_data
 from adjacency_matrix import load_sessions_products
 
-def tune_parameters(cutoff: int):
+def tune_parameters(cutoff: int, jobs: int):
     session_data, products_data = load_sessions_products()
     session_data = session_data.head(int(session_data.index.size / 2))
     params = []
@@ -16,7 +16,7 @@ def tune_parameters(cutoff: int):
     for i in range(cutoff):
         print(i, '/', cutoff, end='\r')
         params_test = [100, 20, uniform(0, 0.1), uniform(0, 1), uniform(0, 0.05), uniform(0, 0.2)]
-        precision_test, recall_test = test('cf', 10, session_data, products_data, params_test, True)
+        precision_test, recall_test = test('cf', 10, session_data, products_data, jobs, params_test, True)
 
         if (precision_test + recall_test > precision + recall):
             params = params_test
@@ -30,6 +30,10 @@ def tune_parameters(cutoff: int):
 
 if __name__ == "__main__":
     cutoff = 1000
-    if (len(sys.argv) > 1):
-        cutoff = int(sys.argv[1])
-    tune_parameters(cutoff)
+    jobs = 8
+    for i in range(1, len(sys.argv)):
+        if sys.argv[i].startswith('-c'):
+            cutoff = int(sys.argv[i][2:])
+        elif sys.argv[i].startswith('-j'):
+            jobs = int(sys.argv[i][2:])
+    tune_parameters(cutoff, jobs)
